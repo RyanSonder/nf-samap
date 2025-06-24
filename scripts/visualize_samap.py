@@ -16,7 +16,10 @@ from pathlib import Path
 from samap.mapping import SAMAP
 from samap.analysis import get_mapping_scores, sankey_plot, chord_plot
 import matplotlib.pyplot as plt
+# For homebrew visualization
 import holoviews as hv
+import pandas as pd
+from holoviews import dim, opts
 
 hv.extension("bokeh")
 
@@ -177,6 +180,56 @@ def save_sankey_plot(mapping_table,
 
 
 # --------------------------------------------------
+def generate_chord_plot(df, threshold=0.1):
+    """
+    Generate a clean, customizable chord plot using Holoviews. Adapted from the original version in 'samap.analysis.py'.
+    
+    Args:
+        df (pandas.dataFrame): Pairwise mapping scores (second output from `samap.analysis.get_mapping_scores`).
+        threshold (float, default=0.1): Alignment score threshold (remove cell type mappings below the threshold).
+        
+    Returns:
+        chord: Generated chord plot.
+    """
+    # Build long dataframe and filter out by the threshold
+    df = df.stack().reset_index()               # Convert to long dataframe
+    df.columns = ['source', 'target', 'score']  # Apply column names
+    df = df[df['score'] >= threshold]           # Apply threshold
+
+	# Group by id2 sample prefix
+    def get_prefix(label): # Function to grab the id2 prefix
+        return label.split('_')[0]
+    df['source_group'] = df['source'].apply(get_prefix) # Get source id2
+    df['target_group'] = df['target'].apply(get_prefix) # Get target id2
+
+    # Define node metadata
+    nodes = pd.Series(pd.unique(df[['source', 'target']].values.ravel('K')))
+    groups = nodes.apply(get_prefix)
+    node_df = pd.DataFrame({'index': nodes, 'group': groups})
+
+    # Save the long data frame to csv
+    df.to_csv('chord.csv')
+    
+    # Build the chord
+    chord = hv.Chord((df, hv.Dataset(node_df, 'index'))).select(score=(0.1, None))
+    chord.opts(
+        opts.Chord(
+            labels='index',
+            edge_color='source_group',  # color links by source group
+            edge_alpha=1,
+            node_color='group',         # color nodes by group
+            cmap='Paired',          # categorical color map
+            width=1000,
+            height=1000,
+            title="Pairwise Mapping Scores by Gene Group",
+            tools=['hover'],
+            bgcolor='snow'
+        )
+    )
+    return chord
+
+
+# --------------------------------------------------
 def save_chord_plot(mapping_table, 
                     output_dir: str, 
                     align_thr=0.05, 
@@ -196,7 +249,8 @@ def save_chord_plot(mapping_table,
         toolbar (bool, default=True): Whether to include toolbar in the plot.
     """
     file_fmt = file_ext.lstrip('.')
-    chord_obj = chord_plot(mapping_table, align_thr)
+    # chord_obj = chord_plot(mapping_table, align_thr)
+    chord_obj = generate_chord_plot(mapping_table, align_thr)
     chord_outfile = os.path.join(output_dir, f"{file_name}.{file_fmt}")
     try:
         log(f"  Attempting to save chord plot to '{chord_outfile}'", "INFO")

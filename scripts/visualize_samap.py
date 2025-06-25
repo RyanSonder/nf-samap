@@ -211,6 +211,7 @@ def generate_chord_plot(df, threshold=0.1, save_csv=True, hierarchy=4) -> hv.Cho
     Args:
         df (pandas.dataFrame): Pairwise mapping scores (second output from `samap.analysis.get_mapping_scores`).
         threshold (float, default=0.1): Alignment score threshold (remove cell type mappings below the threshold).
+        hierarchy (int, default=4): Number of hierarchical clusters to categorize cell type mappings.
         
     Returns:
         chord (hv.Chord): Generated chord plot.

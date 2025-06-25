@@ -199,7 +199,7 @@ def save_sankey_plot(mapping_table,
 
 
 # --------------------------------------------------
-def generate_chord_plot(df, threshold=0.1) -> hv.Chord:
+def generate_chord_plot(df, threshold=0.1, save_csv=True) -> hv.Chord:
     """
     Generate a clean, customizable chord plot using Holoviews.
     
@@ -226,8 +226,8 @@ def generate_chord_plot(df, threshold=0.1) -> hv.Chord:
     groups = nodes.apply(get_prefix)
     node_df = pd.DataFrame({'index': nodes, 'group': groups})
 
-    # Save the long data frame to csv
-    df.to_csv('chord.csv')
+    if save_csv: # Save the long data frame to csv
+        df.to_csv('chord.csv')
     
     # Build the chord
     chord = hv.Chord((df, hv.Dataset(node_df, 'index'))).select(score=(0.1, None))

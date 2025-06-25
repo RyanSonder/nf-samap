@@ -14,12 +14,17 @@ from log_utils import log
 from typing import NamedTuple, Optional
 from pathlib import Path
 from samap.mapping import SAMAP
-from samap.analysis import get_mapping_scores, sankey_plot, chord_plot
+from samap.analysis import get_mapping_scores, sankey_plot
 import matplotlib.pyplot as plt
 # For homebrew visualization
 import holoviews as hv
 import pandas as pd
-from holoviews import dim, opts
+from holoviews import opts
+# For clustering algorithms
+import numpy as np
+from scipy.cluster.hierarchy import linkage, fcluster
+from scipy.spatial.distance import squareform
+
 
 hv.extension("bokeh")
 
@@ -199,7 +204,7 @@ def save_sankey_plot(mapping_table,
 
 
 # --------------------------------------------------
-def generate_chord_plot(df, threshold=0.1, save_csv=True) -> hv.Chord:
+def generate_chord_plot(df, threshold=0.1, save_csv=True, hierarchy=4) -> hv.Chord:
     """
     Generate a clean, customizable chord plot using Holoviews.
     
@@ -210,41 +215,78 @@ def generate_chord_plot(df, threshold=0.1, save_csv=True) -> hv.Chord:
     Returns:
         chord (hv.Chord): Generated chord plot.
     """
+    opts_config = {
+        'labels': 'index',
+        'edge_color': 'source_group',
+        'edge_alpha': 1,
+        'node_color': 'group',
+        'cmap': 'Paired',
+        'width': 1000,
+        'height': 1000,
+        'title': 'Pairwise Mapping Scores by Gene Group',
+        'tools': ['hover'],
+        'bgcolor': 'snow',
+        
+    }
+    
     # Build long dataframe and filter out by the threshold
-    df = df.stack().reset_index()               # Convert to long dataframe
-    df.columns = ['source', 'target', 'score']  # Apply column names
-    df = df[df['score'] >= threshold]           # Apply threshold
+    df_gg = df.stack().reset_index()               # Convert to long dataframe
+    df_gg.columns = ['source', 'target', 'score']  # Apply column names
+    df_gg = df_gg[df_gg['score'] >= threshold] # Apply threshold
 
-    # Create group ids
-    df[['source_group', 'target_group']] = df[['source', 'target']].apply(lambda x: x.str.split('_').str[0], axis=1)
+    # Group by id2 sample prefix
+    df_gg[['source_group', 'target_group']] = df_gg[['source', 'target']].apply(lambda x: x.str.split('_').str[0], axis=1)
 
     # Define node metadata
-    nodes = pd.unique(df[['source', 'target']].values.ravel())
-    node_df = pd.DataFrame({
-        'index': nodes,
-        'group': nodes.str.split('_').str[0]
-    })
-
-    if save_csv: # Save the long data frame to csv
-        df.to_csv('chord.csv')
+    nodes = pd.Series(pd.unique(df_gg[['source', 'target']].values.ravel('K')))
+    groups = nodes.apply(lambda x: x.split('_')[0])
+    node_df = pd.DataFrame({'index': nodes, 'group': groups})
     
-    # Build the chord
-    chord = hv.Chord((df, hv.Dataset(node_df, 'index'))).select(score=(0.1, None))
-    chord.opts(
-        opts.Chord(
-            labels='index',
-            edge_color='source_group',  # color links by source group
-            edge_alpha=1,
-            node_color='group',         # color nodes by group
-            cmap='Paired',          # categorical color map
-            width=1000,
-            height=1000,
-            title="Pairwise Mapping Scores by Gene Group",
-            tools=['hover'],
-            bgcolor='snow'
-        )
-    )
-    return chord
+    if save_csv: # Save the long data frame to csv
+        df.to_csv('chord_gg.csv')
+    
+    # Build the gene group chord plot
+    chord_gg = hv.Chord((df_gg, hv.Dataset(node_df, 'index'))).select(score=(0.1, None))
+    chord_gg.opts(opts.Chord(**opts_config))
+    chord_gg.opts(opts.Chord(title='Pairwise Mapping Scores by Gene Group'))
+    
+    # ----------------------------------------------
+    # Hierarchical clustering
+    # ----------------------------------------------
+    score_matrix = df.values                        # Convert to NumPy array
+    distance_matrix = 1 - score_matrix              # Convert similarity to distance
+    np.fill_diagonal(distance_matrix, 0)            # Ensure 0s on diagonal
+    condensed = squareform(distance_matrix)         # Convert to condensed form
+    Z = linkage(condensed, method='average')        # Hierarchical clustering; methods can be `ward` `average` `complete`
+    k = hierarchy                                   # k-clusters
+    labels = fcluster(Z, k, criterion='maxclust')   # Assign cluster labels
+    cluster_map = dict(zip(df.index, labels))       # Map cluster labels back to original row/column labels
+    
+    # Sort labels by cluster, then alphabetically within cluster (affects rendering order)
+    sorted_nodes = sorted(df.index, key=lambda x: (cluster_map[x], x))
+    df_ordered = df.loc[sorted_nodes, sorted_nodes]
+
+    df_hc = df_ordered.stack().reset_index()
+    df_hc.columns = ['source', 'target', 'score']
+    df_hc = df_hc[df_hc['score'] >= threshold]
+    
+    # Add the clustering groups
+    df_hc['source_group'] = df_hc['source'].map(cluster_map)
+    df_hc['target_group'] = df_hc['target'].map(cluster_map)
+
+    # Define node metadata 
+    nodes = pd.Series(pd.unique(df_hc[['source', 'target']].values.ravel('K')))
+    groups = nodes.map(cluster_map)
+    node_df = pd.DataFrame({'index': nodes, 'group': groups})
+
+    chord_hc = hv.Chord(df_hc)
+    chord_hc.opts(opts.Chord(**opts_config))
+    chord_hc.opts(opts.Chord(title=f'Pairwise Mapping Scores by {k} Hierarchical Clusters'))
+    
+    if save_csv:
+        df_hc.to_csv('chord_hc.csv')
+    
+    return chord_gg, chord_hc
 
 
 # --------------------------------------------------
@@ -268,14 +310,17 @@ def save_chord_plot(mapping_table,
     """
     file_fmt = file_ext.lstrip('.')
     # chord_obj = chord_plot(mapping_table, align_thr)
-    chord_obj = generate_chord_plot(mapping_table, align_thr)
-    chord_outfile = os.path.join(output_dir, f"{file_name}.{file_fmt}")
-    try:
-        log(f"  Attempting to save chord plot to '{chord_outfile}'", "INFO")
-        hv.save(chord_obj, chord_outfile, backend="bokeh", fmt=file_fmt, toolbar=toolbar, title=title)
-        log(f"  Successfully saved chord plot to '{chord_outfile}'", "INFO")
-    except Exception as e:
-        log(f"  Failed to save chord plot to '{chord_outfile}'. Error: {e}")
+    gg_chord, hc_chord = generate_chord_plot(mapping_table, align_thr)
+
+    for tag, chord_obj in [('gg', gg_chord), ('hc', hc_chord)]:
+        chord_outfile = os.path.join(output_dir, f"{file_name}_{tag}.{file_fmt}")
+        try:
+            log(f"  Attempting to save {tag} chord plot to '{chord_outfile}'", "INFO")
+            hv.save(chord_obj, chord_outfile, backend="bokeh", fmt=file_fmt, toolbar=toolbar, title=title)
+            log(f"  Successfully saved {tag} chord plot to '{chord_outfile}'", "INFO")
+        except Exception as e:
+            log(f"  Failed to save {tag} chord plot to '{chord_outfile}'. Error: {e}")
+
 
 
 # --------------------------------------------------

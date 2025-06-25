@@ -35,11 +35,14 @@ process VISUALIZE_SAMAP {
         path sample_sheet
 
     output:
-        path "chord.html"
+        path "chord_gg.html"
+        path "chord_hc.html"
         path "sankey.html"
         path "scatter.png"
         path "hms.csv"
         path "pms.csv"
+        path "chord_gg.csv"
+        path "chord_hc.csv"
         path "${run_id}_viz.log"
 
     script:

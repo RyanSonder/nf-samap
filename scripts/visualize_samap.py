@@ -215,16 +215,15 @@ def generate_chord_plot(df, threshold=0.1, save_csv=True) -> hv.Chord:
     df.columns = ['source', 'target', 'score']  # Apply column names
     df = df[df['score'] >= threshold]           # Apply threshold
 
-	# Group by id2 sample prefix
-    def get_prefix(label): # Function to grab the id2 prefix
-        return label.split('_')[0]
-    df['source_group'] = df['source'].apply(get_prefix) # Get source id2
-    df['target_group'] = df['target'].apply(get_prefix) # Get target id2
+    # Create group ids
+    df[['source_group', 'target_group']] = df[['source', 'target']].apply(lambda x: x.str.split('_').str[0], axis=1)
 
     # Define node metadata
-    nodes = pd.Series(pd.unique(df[['source', 'target']].values.ravel('K')))
-    groups = nodes.apply(get_prefix)
-    node_df = pd.DataFrame({'index': nodes, 'group': groups})
+    nodes = pd.unique(df[['source', 'target']].values.ravel())
+    node_df = pd.DataFrame({
+        'index': nodes,
+        'group': nodes.str.split('_').str[0]
+    })
 
     if save_csv: # Save the long data frame to csv
         df.to_csv('chord.csv')

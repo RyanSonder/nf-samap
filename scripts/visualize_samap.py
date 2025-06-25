@@ -149,6 +149,25 @@ def save_mapping_scores(samap: SAMAP,
 
 
 # --------------------------------------------------
+def generate_sankey_plot(df, threshold=0.1) -> hv.Sankey:
+    """
+    Generate a clean, customizeable sankey plot using Holoviews.
+    
+    Args:
+        df (pandas.dataFrame): Pairwise mapping scores (second output from `samap.analysis.get_mapping_scores`).
+        threshold (float, default=0.1): Alignment score threshold (remove cell type mappings below the threshold).
+        
+    Returns:
+        sankey (hv.Sankey): Generated sankey plot.
+    """
+    
+    
+    
+    
+    return None
+
+
+# --------------------------------------------------
 def save_sankey_plot(mapping_table, 
                     output_dir: str,
                     align_thr=0.05,
@@ -180,16 +199,16 @@ def save_sankey_plot(mapping_table,
 
 
 # --------------------------------------------------
-def generate_chord_plot(df, threshold=0.1):
+def generate_chord_plot(df, threshold=0.1) -> hv.Chord:
     """
-    Generate a clean, customizable chord plot using Holoviews. Adapted from the original version in 'samap.analysis.py'.
+    Generate a clean, customizable chord plot using Holoviews.
     
     Args:
         df (pandas.dataFrame): Pairwise mapping scores (second output from `samap.analysis.get_mapping_scores`).
         threshold (float, default=0.1): Alignment score threshold (remove cell type mappings below the threshold).
         
     Returns:
-        chord: Generated chord plot.
+        chord (hv.Chord): Generated chord plot.
     """
     # Build long dataframe and filter out by the threshold
     df = df.stack().reset_index()               # Convert to long dataframe

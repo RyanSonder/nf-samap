@@ -154,24 +154,61 @@ def save_mapping_scores(samap: SAMAP,
 
 
 # --------------------------------------------------
-def generate_sankey_plot(df, threshold=0.1) -> hv.Sankey:
+def generate_sankey_plot(df, threshold=0.1, species_order=None) -> hv.Sankey:
     """
     Generate a clean, customizeable sankey plot using Holoviews.
     
     Args:
         df (pandas.dataFrame): Pairwise mapping scores (second output from `samap.analysis.get_mapping_scores`).
         threshold (float, default=0.1): Alignment score threshold (remove cell type mappings below the threshold).
+        species_order (list[str], optional, default=None): Specify the order of species (left-to-right) in the sankey plot.
         
     Returns:
         sankey (hv.Sankey): Generated sankey plot.
     """
+    opts_config = {
+        'cmap': 'Paired',
+        'label_position': 'outer',
+        'edge_line_width': 0,
+        'show_values': False,
+        'node_padding': 4,
+        'node_alpha': 1.0,
+        'node_width': 40,
+        'node_sort': True,
+        'frame_height': 800,
+        'bgcolor': 'snow',
+        'apply_ranges': True,
+    }
+    if species_order is not None:
+        ids = np.array(species_order)
+    else:
+        ids = np.unique([x.split('_')[0] for x in df.index])
+    
+    node_order = {item: index for index, item in enumerate(ids)}
+    print(f'  ==={node_order}===')
+    
+    df_long = df.stack().reset_index()
+    df_long.columns = ['source', 'target', 'value']
+    df_long = df_long[df_long['value'] >= threshold]
     
     
+    df_long.to_csv("debug_3.csv")
+    
+    df_long[['source_order', 'target_order']] = df_long[['source', 'target']].apply(lambda x: x.str.split('_').str[0].map(node_order))
+    df_long.to_csv("debug_4.csv")
+    
+    # df_long = df_long[df_long['source'].map(node_order) < df_long['target'].map(node_order)]
+    df_long = df_long[df_long['source_order'] < df_long['target_order']]
+    df_long.to_csv("debug_5.csv")
     
     
-    return None
+    sankey = hv.Sankey(df_long, kdims=["source", "target"])
+    sankey.opts(**opts_config)
+    sankey.opts(title='Sankey Plot of Expression Similarity by Gene Group')
+    
+    return sankey
 
-
+# \/
 # --------------------------------------------------
 def save_sankey_plot(mapping_table, 
                     output_dir: str,
@@ -194,6 +231,7 @@ def save_sankey_plot(mapping_table,
     """
     file_fmt = file_ext.lstrip('.')
     sankey_obj = sankey_plot(mapping_table, align_thr=align_thr)
+    sankey_obj = generate_sankey_plot(mapping_table)
     sankey_outfile = os.path.join(output_dir, f"{file_name}.{file_fmt}")
     try:
         log(f"  Attempting to save sankey plot to '{sankey_outfile}'", "INFO")
@@ -244,7 +282,7 @@ def generate_chord_plot(df, threshold=0.1, save_csv=True, hierarchy=4) -> hv.Cho
     node_df = pd.DataFrame({'index': nodes, 'group': groups})
     
     if save_csv: # Save the long data frame to csv
-        df.to_csv('chord_gg.csv')
+        df_gg.to_csv('chord_gg.csv')
     
     # Build the gene group chord plot
     chord_gg = hv.Chord((df_gg, hv.Dataset(node_df, 'index'))).select(score=(0.1, None))

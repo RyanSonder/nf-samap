@@ -81,27 +81,27 @@ echo "${header},type,id2" > "$output_csv"
 # Process each row in the csv
 log "INFO" "Updating sample sheet with type and id2 values"
 tail -n +2 "$input_csv" | while IFS=, read -r id h5ad fasta annotation; do
-    log "INFO" "> Updating entry $id - ($fasta)"
-    log "INFO" "  > Classifying fasta"
+    log "INFO" "  Updating entry $id - ($fasta)"
+    log "INFO" "    Classifying fasta"
     type=$(classify_fasta "$fasta")
-    log "INFO" "  > Fasta classified as '$type'"
+    log "INFO" "    Fasta classified as '$type'"
     
     # Generate a reproducible key by hashing a combination of id and fasta
-    log "INFO" "  > Generating hash"
+    log "INFO" "    Generating hash"
     hash=$(echo -n "${id}${fasta}" | sha256sum | awk '{print $1}' | tr '[:upper:]' '[:lower:]')
     # Take the first two characters of the hash, ensuring they are valid lowercase alphabetic characters
     key=$(echo "$hash" | tr -cd 'a-z' | cut -c1-"$hashed_id_len")
-    log "INFO" "  > Trying '$key'"
+    log "INFO" "    Trying '$key'"
 
     # Ensure unique key generation with max 100 attempts
     attempt=0
     max_attempts=100
     while [[ -n "${used_ids[$key]}" || ${#key} -lt $hashed_id_len ]]; do
-        log "WARNING" "  > $key not valid"
+        log "WARNING" "    $key not valid"
         # If key is not long enough or already seen, shift and regenerate
         hash=$(echo "$hash" | tr 'a-z' 'b-za')
         key=$(echo "$hash" | tr -cd 'a-z' | cut -c1-"$hashed_id_len")
-        log "INFO" "  > Trying '$key'"
+        log "INFO" "    Trying '$key'"
         attempt=$((attempt + 1))
         if [[ $attempt -ge $max_attempts ]]; then
             log "ERROR" "Exceeded attemps to generate unique id2"
@@ -109,7 +109,7 @@ tail -n +2 "$input_csv" | while IFS=, read -r id h5ad fasta annotation; do
         fi
     done
 
-    log "INFO" "  > '$key' is valid"
+    log "INFO" "    '$key' is valid"
     used_ids[$key]=1    # Store the unique key in the seen_keys array
     id2="$key"          # Assign the unique key to id2
 

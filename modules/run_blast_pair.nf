@@ -14,16 +14,11 @@
  *
  *  Outputs:
  *      Two BLAST result text files for each direction and a logfile
- *      results/${run_id}/maps/{pair_id}/[A_to_B.txt, B_to_A.txt]
+ *      {run_id}/maps/{pair_id}/[A_to_B.txt, B_to_A.txt]
  */
 
 process RUN_BLAST_PAIR {
     tag "${run_id} - ${a.id2}_vs_${b.id2}"
-
-    publishDir("results/${run_id}/", mode: 'copy', pattern: "maps/*/*_to_*.txt")
-    publishDir("results/${run_id}/logs", mode: 'copy', pattern: "*.log")
-
-    container 'pipeline/samap-blast:latest'
 
     input:
         val run_id
@@ -32,7 +27,7 @@ process RUN_BLAST_PAIR {
 
     output:
         path "maps/*/*_to_*.txt", emit: maps
-        path "${run_id}_${a.id2}${b.id2}_blast.log", emit: logfile
+        path "*.log", emit: logfile
 
     script:
     """

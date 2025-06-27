@@ -42,7 +42,7 @@
  *
  *  Author:     Ryan Sonderman
  *  Created:    2025-06-12
- *  Version:    1.0.0
+ *  Version:    1.2.0
  */
 
 // Import the required modules 
@@ -57,16 +57,12 @@ workflow {
     // Generate run ID unless one is provided
     run_id = params.run_id ?: "${new Date().format('yyyyMMdd_HHmmss')}"
     run_id_ch = Channel.value(run_id)
+    // params.outdir = "${params.outdir}/${run_id}" // Not working gotta fix it later
+    
 
     // Stage static input files
     data_dir        = Channel.fromPath(params.data_dir)
-    results_dir     = Channel.fromPath(params.results_dir)
     sample_sheet    = Channel.fromPath(params.sample_sheet)
-
-    // Validation of necessary files
-    if (!new File(params.sample_sheet).exists()) {
-        error "Missing required file: sample sheet '${params.sample_sheet}'"
-    }
 
 
     // Preprocess sample sheet to add type and ID
@@ -97,9 +93,11 @@ workflow {
             data_dir.first(),
         )
         // Set path to maps from BLAST results
+        // maps_dir = results_dir.combine(run_id_ch).map { _results_dir, _run_id -> _results_dir.resolve(_run_id).resolve('maps') }
         maps_dir = RUN_BLAST_PAIR.out.maps
+            .flatten()
             .map { it.getParent().getParent() }
-            .unique()
+            .distinct()
     }
 
 
@@ -118,7 +116,6 @@ workflow {
         sample_sheet_pr,
         data_dir,
         maps_dir,
-        results_dir,
         sams,
     )
     samap = BUILD_SAMAP.out.samap
@@ -127,7 +124,6 @@ workflow {
     // Run SAMap on the SAMAP object to generate mapping results
     RUN_SAMAP(
         run_id_ch,
-        results_dir,
         samap,
     )
     samap_results = RUN_SAMAP.out.results

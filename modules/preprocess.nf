@@ -13,17 +13,12 @@
  *
  *  Outputs:
  *      A sample sheet with the added values and a logfile
- *      results/run_id/run_id_sample_sheet.csv
- *      results/run_id/logs/run_id_preprocess.log
+ *      {run_id}_sample_sheet.csv
+ *      {run_id}_preprocess.log
  */
 
 process PREPROCESS {
     tag "${run_id} - sample sheet preprocessing"
-
-    publishDir("results/${run_id}/", mode: 'copy', pattern: '*.csv')
-    publishDir("results/${run_id}/logs/", mode: 'copy', pattern: '*.log')
-
-    container 'pipeline/samap-blast:latest'
 
     input:
         val run_id
@@ -31,8 +26,8 @@ process PREPROCESS {
         path data_dir
 
     output:       
-        path "${run_id}_sample_sheet.csv", emit: sample_sheet_pr
-        path "${run_id}_preprocess.log", emit: logfile
+        path "*.csv", emit: sample_sheet_pr
+        path "*.log", emit: logfile
 
     script:
     """

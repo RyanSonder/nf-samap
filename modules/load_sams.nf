@@ -19,11 +19,6 @@
 process LOAD_SAMS {
     tag "${run_id} - load and pickle SAM objects"
 
-    publishDir("results/${run_id}/sams/", mode: 'copy', pattern: '*.pkl')
-    publishDir("results/${run_id}/logs/", mode: 'copy', pattern: '*.log')
-
-    container 'pipeline/samap:latest'
-
     input:
         val run_id
         path sample_sheet 
@@ -31,7 +26,7 @@ process LOAD_SAMS {
 
     output:
         path "*.pkl", emit: sams
-        path "${run_id}_load_sams.log", emit: logfile
+        path "*.log", emit: logfile
 
     script:
     """

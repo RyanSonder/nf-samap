@@ -22,11 +22,6 @@
 process VISUALIZE_SAMAP {
     tag "${run_id} - SAMap visualization"
 
-    publishDir("results/${run_id}/plots/", mode: 'copy', pattern: '*.html')
-    publishDir("results/${run_id}/plots/", mode: 'copy', pattern: '*.png')
-    publishDir("results/${run_id}/logs/", mode: 'copy', pattern: '*.log')
-    publishDir("results/${run_id}/csv/", mode: 'copy', pattern: '*.csv')
-
     container 'pipeline/samap:latest'
 
     input:
@@ -40,7 +35,7 @@ process VISUALIZE_SAMAP {
         path "scatter.png"
         path "hms.csv"
         path "pms.csv"
-        path "${run_id}_viz.log"
+        path "*.log"
 
     script:
     """

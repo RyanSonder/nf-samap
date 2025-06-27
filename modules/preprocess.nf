@@ -36,10 +36,6 @@ process PREPROCESS {
 
     script:
     """
-    pwd
-    while true; do
-        sleep 1
-    done
     LOG=${run_id}_preprocess.log
     update_sample_sheet.sh ${sample_sheet} ${run_id}_${sample_sheet} 2>&1 | tee -a \$LOG
     """

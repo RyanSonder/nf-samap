@@ -97,9 +97,7 @@ workflow {
             data_dir.first(),
         )
         // Set path to maps from BLAST results
-        maps_dir = RUN_BLAST_PAIR.out.maps
-            .map { it.getParent().getParent() }
-            .unique()
+        maps_dir = results_dir.combine(run_id_ch).map { _results_dir, _run_id -> _results_dir.resolve(_run_id).resolve('maps') }
     }
 
 

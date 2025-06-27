@@ -41,9 +41,10 @@ def get_args() -> Args:
 
     parser.add_argument(
         '-d', '--sams-dir',
-        required=True,
+        required=False,
         type=Path,
-        help='Directory containing SAM pickle files'
+        help='Directory containing SAM pickle files',
+        default=Path('.')
     )
 
     parser.add_argument(

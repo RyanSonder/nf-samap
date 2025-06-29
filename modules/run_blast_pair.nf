@@ -31,14 +31,6 @@ process RUN_BLAST_PAIR {
 
     script:
     """
-    WORKDIR=/mnt/jfs_cache/blast_work_${a.id2}_${b.id2}
-    mkdir -p \$WORKDIR/maps/${a.id2}_vs_${b.id2}
-    cd \$WORKDIR
-
-    cp ${a.fasta} ./a.fasta
-    cp ${b.fasta} ./b.fasta
-
-
     LOG="${run_id}_${a.id2}${b.id2}_blast.log"
     map_genes.sh \\
         --threads ${task.cpus} \\
@@ -47,8 +39,5 @@ process RUN_BLAST_PAIR {
         while IFS= read -r line; do
             echo "[\$(date +'%Y-%m-%d %H:%M:%S.%3N')] \$line"
         done 2>&1 | tee -a \$LOG
-
-    cp -r \$WORKDIR/maps \$PWD/
-    cp \$LOG \$PWD/
     """
 }

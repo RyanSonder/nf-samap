@@ -35,7 +35,7 @@ process BUILD_SAMAP {
     """
     LOG="${run_id}_build_samap.log"
     build_samap.py \\
-        --sams_dir "." \\
+        --sams-dir "." \\
         --sample-sheet ${sample_sheet} \\
         --maps ${maps_dir} 2>&1 | tee -a \$LOG
     """

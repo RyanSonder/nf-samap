@@ -31,11 +31,16 @@ process RUN_BLAST_PAIR {
 
     script:
     """
+    fasta_a=\$(basename "${a.fasta}")
+    cp "${a.fasta}" "\${fasta_a}"
+    fasta_b=\$(basename "${b.fasta}")
+    cp "${b.fasta}" "\${fasta_b}"
+    
     LOG="${run_id}_${a.id2}${b.id2}_blast.log"
     map_genes.sh \\
         --threads ${task.cpus} \\
-        --tr1 ${a.fasta} --t1 ${a.type} --n1 ${a.id2} \\
-        --tr2 ${b.fasta} --t2 ${b.type} --n2 ${b.id2} | \\
+        --tr1 "\${fasta_a}" --t1 ${a.type} --n1 ${a.id2} \\
+        --tr2 "\${fasta_b}" --t2 ${b.type} --n2 ${b.id2} | \\
         while IFS= read -r line; do
             echo "[\$(date +'%Y-%m-%d %H:%M:%S.%3N')] \$line"
         done 2>&1 | tee -a \$LOG

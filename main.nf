@@ -17,9 +17,10 @@
  *      1. Preprocess sample sheet to classify inputs and assign IDs
  *      2. Generate all unordered species pairs
  *      3. Run reciprocal BLAST on each species pair
- *      4. Build a SAMap object
- *      5. Run SAMap on each BLAST result
- *      6. Visualize SAMap alignment and write results
+ *      4. Merge the BLAST results for easy usage
+ *      5. Build a SAMap object
+ *      6. Run SAMap on each BLAST result
+ *      7. Visualize SAMap alignment and write results
  *
  *  Parameters:
  *      --run_id        Run ID provided by user. If none is provided a timestamp is used. Default: null
@@ -42,12 +43,13 @@
  *
  *  Author:     Ryan Sonderman
  *  Created:    2025-06-12
- *  Version:    1.2.0
+ *  Version:    1.3.0
  */
 
 // Import the required modules 
 include { PREPROCESS } from './modules/preprocess.nf'
 include { RUN_BLAST_PAIR } from './modules/run_blast_pair.nf'
+include { MERGE_MAPS } from './modules/merge_maps.nf'
 include { LOAD_SAMS } from './modules/load_sams.nf'
 include { BUILD_SAMAP } from './modules/build_samap.nf'
 include { RUN_SAMAP } from './modules/run_samap.nf'
@@ -74,30 +76,35 @@ workflow {
     sample_sheet_pr = PREPROCESS.out.sample_sheet_pr
 
 
-    // Generate unique unordered sample pairs
-    samples_channel = sample_sheet_pr.splitCsv(header: true, sep: ',')
-    pairs_channel = samples_channel
-        .combine(samples_channel)
-        .filter { a, b -> a.id2 < b.id2 }
-
-
     // Run BLAST or load precomputed map files 
     if (params.maps_dir) {
         // Use user-supplied BLAST maps
         maps_dir = Channel.fromPath(params.maps_dir)
     } else {
-        // Run BLAST and extract parent maps directory
+        // Generate unique unordered sample pairs
+        samples_channel = sample_sheet_pr.splitCsv(header: true, sep: ',')
+        pairs_channel = samples_channel
+            .combine(samples_channel)
+            .filter { a, b -> a.id2 < b.id2 }
+        // Compute BLAST maps from pairs channel
         RUN_BLAST_PAIR(
             run_id_ch,
             pairs_channel,
             data_dir.first(),
         )
-        // Set path to maps from BLAST results
-        // maps_dir = results_dir.combine(run_id_ch).map { _results_dir, _run_id -> _results_dir.resolve(_run_id).resolve('maps') }
-        maps_dir = RUN_BLAST_PAIR.out.maps
+        // Collect files for merging
+        maps_ch = RUN_BLAST_PAIR.out.maps
+            .collect()
             .flatten()
             .map { it.getParent().getParent() }
             .distinct()
+            .collect()
+        // Merge the maps into a single directory
+        MERGE_MAPS(
+            run_id,
+            maps_ch
+        )
+        maps_dir = MERGE_MAPS.out.maps
     }
 
 

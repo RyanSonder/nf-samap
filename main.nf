@@ -96,9 +96,10 @@ workflow {
         maps_ch = RUN_BLAST_PAIR.out.maps
             .collect()
             .flatten()
-            .map { it.getParent().getParent() }
+            .map { it.getParent() }
             .distinct()
             .collect()
+            .map { it -> tuple(it) }
         // Merge the maps into a single directory
         MERGE_MAPS(
             run_id,

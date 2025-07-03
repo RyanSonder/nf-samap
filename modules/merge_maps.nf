@@ -18,7 +18,7 @@ process MERGE_MAPS {
 
     input:
         val run_id
-        val maps_dirs
+        path maps_dirs
 
     output:
         path "maps/", emit: maps
@@ -27,13 +27,14 @@ process MERGE_MAPS {
     script:
     """
     LOG="${run_id}_merge.log"
-    echo "[\$(date +'%Y-%m-%d %H:%M:%S.%3N')] Creating unified `maps/` directory"
+    echo "[\$(date +'%Y-%m-%d %H:%M:%S.%3N')] Creating unified maps/ directory" | tee -a \$LOG
     mkdir -p maps
-    for d in ${maps_dirs.join(' ')}; do
-        pair_id_dir=\$(basename \$(find \$d -type d -mindepth 1 -maxdepth 1))
-        echo "[\$(date +'%Y-%m-%d %H:%M:%S.%3N')]   Attempting to copy \${pair_id_dir} into `maps/`"
-        mkdir -p maps/\$pair_id_dir
-        cp \$d/\$pair_id_dir/*_to_*.txt maps/\$pair_id_dir/
+    for map in ${maps_dirs}; do
+        echo "[\$(date +'%Y-%m-%d %H:%M:%S.%3N')]   Identified \$map mapping, creating dir"
+        mkdir -p maps/\$map
+        echo "[\$(date +'%Y-%m-%d %H:%M:%S.%3N')]   Attempting to copy \${map} into maps/"
+        cp \$map/*_to_*.txt maps/\$map/
     done 2>&1 | tee -a \$LOG
+    echo "[\$(date +'%Y-%m-%d %H:%M:%S.%3N')] Script complete" | tee -a \$LOG
     """
 }

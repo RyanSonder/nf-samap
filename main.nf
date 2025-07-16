@@ -47,6 +47,7 @@
  */
 
 // Import the required modules 
+include { RDS_TO_H5AD } from './modules/rds_to_h5ad.nf'
 include { PREPROCESS } from './modules/preprocess.nf'
 include { RUN_BLAST_PAIR } from './modules/run_blast_pair.nf'
 include { MERGE_MAPS } from './modules/merge_maps.nf'
@@ -65,6 +66,12 @@ workflow {
     // Stage static input files
     data_dir        = Channel.fromPath(params.data_dir)
     sample_sheet    = Channel.fromPath(params.sample_sheet)
+
+    // Convert RDS files to H5AD format
+    RDS_TO_H5AD(
+        run_id_ch,
+        data_dir,
+    )
 
 
     // Preprocess sample sheet to add type and ID

@@ -143,10 +143,27 @@ tail -n +2 "$samplesheet" | while IFS=, read -r $cols; do
             log "ERROR" "Line $line_num: Missing '$path' entry"
             exit 1
         fi
-        if [[ ! -f "${!path}" ]]; then
-            log "ERROR" "Line $line_num: File '${!path}' does not exist or is not readable"
-            exit 1
-        fi
+        # Check file extension
+        case "$path" in
+            fasta)
+                if [[ ! "${!path}" =~ \.fa(sta)?$ ]]; then
+                    log "ERROR" "Line $line_num: '$path' entry '${!path}' does not end with .fa or .fasta"
+                    exit 1
+                fi
+                ;;
+            h5ad)
+                if [[ ! "${!path}" =~ \.h5ad$ ]]; then
+                    log "ERROR" "Line $line_num: '$path' entry '${!path}' does not end with .h5ad"
+                    exit 1
+                fi
+                ;;
+            rds)
+                if [[ ! "${!path}" =~ \.rds$ ]]; then
+                    log "ERROR" "Line $line_num: '$path' entry '${!path}' does not end with .rds"
+                    exit 1
+                fi
+                ;;
+        esac
     done
 
     # 3. Validate annotation

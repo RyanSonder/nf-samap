@@ -36,7 +36,7 @@ if [ $# -ne 2 ]; then
 fi
 input_csv="$1"
 if [ ! -f "$input_csv" ]; then
-    log "ERROR" "FIle '$input_csv' not found or not readable"
+    log "ERROR" "File '$input_csv' not found or not readable"
     exit 2
 fi
 log "INFO" "Found sample sheet: $input_csv"

@@ -23,7 +23,6 @@ args <- commandArgs(trailingOnly = TRUE)
 opt_list <- list(
     "--rds"     = NA,
     "--out"     = NA,
-    "--type"    = NA,
     "--ident"   = NA,
     "--meta_field" = NA
 )
@@ -40,7 +39,6 @@ for(i in seq(1, length(args), by=2)) {
 
 rds <- opt_list[["--rds"]]
 out <- opt_list[["--out"]]
-type <- opt_list[["--type"]]
 ident <- opt_list[["--ident"]]
 meta_field <- opt_list[["--meta_field"]]
 

@@ -36,6 +36,8 @@ if [ ! -f "$samplesheet" ]; then
 fi
 log "INFO" "Found sample sheet: $samplesheet"
 
+declare -A seen_ids
+
 #==========================================================
 # Main Logic
 #==========================================================
@@ -48,10 +50,10 @@ read -r header < "$samplesheet"
 
 # - Check that the header matches expected columns
 log "INFO" "Checking header columns"
-if [[ "$header" == "id,matrix,fasta,annotation" ]]; then
+if [[ "$header" == "id,id2,matrix,fasta,annotation" ]]; then
     log "INFO" "Header matches expected format"
 else
-    log "ERROR" "Header does not match expected format: 'id,matrix,fasta,annotation'"
+    log "ERROR" "Header does not match expected format: 'id,id2,matrix,fasta,annotation'"
     exit 1
 fi
 
@@ -70,7 +72,7 @@ log "INFO" "Minimum data rows check passed. Found $data_rows rows in sample shee
 echo "" 
 log "INFO" "Checking data entries in sample sheet"
 line_num=1
-tail -n +2 "$samplesheet" | while IFS=, read -r id matrix fasta annotation; do 
+tail -n +2 "$samplesheet" | while IFS=, read -r id id2 matrix fasta annotation; do 
     line_num=$((line_num + 1))
 
     # 1. Validate ID
@@ -78,6 +80,19 @@ tail -n +2 "$samplesheet" | while IFS=, read -r id matrix fasta annotation; do
         log "ERROR" "Line $line_num: Invalid id '$id' (only letters, digits, _ or - allowed)"
         exit 1
     fi
+
+    # 2. Validate ID2
+    log "INFO" "$id2"
+    if [[ ! $id2 =~ ^[A-Za-z0-9]{2}$ ]]; then 
+        log "ERROR" "Line $line_num: Invalid id2 '$id2' (exaclty 2 letters & digits allowed)"
+        exit 1
+    fi
+    if [[ -n ${seen_ids[$id2]+_} ]]; then
+        log "ERROR" "Line $line_num: Duplicate id2 '$id2' (collision detected)"
+        exit 1
+    fi
+    seen_ids[$id2]=1
+    log "INFO" "ID2 /$id2 okay for sample /$id"
 
     # 2. Validate matrix
     if [[ ! $matrix =~ \.rds$ ]] && [[ ! $matrix =~ \.h5ad ]]; then
@@ -97,6 +112,9 @@ tail -n +2 "$samplesheet" | while IFS=, read -r id matrix fasta annotation; do
         exit 1
     fi
 done
+if [[ $? == 1 ]]; then # Force exit if subshell threw error
+    exit 1
+fi
 log "INFO" "All data entries validated successfully"
 
 echo ""

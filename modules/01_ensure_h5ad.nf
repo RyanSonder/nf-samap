@@ -15,7 +15,7 @@
  */
 
 process ENSURE_H5AD {
-    tag "${run_id} - ensure h5ad"
+    tag "${run_id} - ${sample_meta.id}: ensure h5ad"
 
     input:
         val run_id

@@ -24,7 +24,7 @@ process ENSURE_H5AD {
 
     output:
         path "*.log", emit: logfile
-        path "${sample_meta.id}.h5ad" // >>> ????
+        path "${sample_meta.id}.h5ad", emit: h5ad_file
 
     script:
     """

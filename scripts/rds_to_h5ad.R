@@ -1,10 +1,28 @@
 #!/usr/bin/env Rscript
 
-# rds_to_h5ad.nf
+# rds_to_h5ad.R
 # Author : Ryan Sonderman
 # Date   : 2025-07-15
 # Version: 1.0.0
 # Purpose: RDS to H5AD conversion for SAMap
+
+
+# ============================================================
+# Logging utility
+# ============================================================
+
+log_msg <- function(level, ...) {
+    timestamp <- format(Sys.time(), "%Y-%m-%d %H:%M:%OS3")
+    msg <- paste(..., collapse = " ")
+    cat(sprintf("%s [%s]: %s\n", timestamp, level, msg))
+}
+
+log_info <- function(...) log_msg("INFO", ...)
+log_error <- function(...) log_msg("ERROR", ...)
+
+log_buffer <- textConnection("LOG_LINES", "w")
+sink(log_buffer)                  # redirect all stdout into LOG_LINES
+sink(log_buffer, type="message")  # redirect all messages/warnings/errors
 
 # ============================================================
 # Load in the required libraries
@@ -33,6 +51,7 @@ for(i in seq(1, length(args), by=2)) {
     if (key %in% names(opt_list)) {
         opt_list[[key]] <- val
     } else {
+        cat(sprintf("Unknown argument: %s\n", key))
         stop("Unknown argument: ", key)
     }
 }
@@ -43,7 +62,8 @@ ident <- opt_list[["--ident"]]
 meta_field <- opt_list[["--meta_field"]]
 
 if (!file.exists(rds)) {
-    stop("RDS not found: ", rds)
+    cat(sprintf("RDS file not found: %s\n", rds))
+    stop(sprintf("RDS not found: %s", rds))
 }
 
 # ============================================================
@@ -51,14 +71,33 @@ if (!file.exists(rds)) {
 # ============================================================
 
 # - Load the RDS file
+cat(sprintf("Loading RDS file: %s\n", rds))
 rds_data <- readRDS(rds)
 
 # - Take the subset of the RDS data based on the identity
+cat(sprintf("Subsetting data for identity: %s\n", ident))
 subset_data <- rds_data[, rds_data@meta.data[[ meta_field ]] == ident ]
 
 # - Save the Seurat object to h5Seurat format
+cat(sprintf("Saving subset data to h5Seurat format: %s\n", out))
 SaveH5Seurat(subset_data, filename = out)
 
 # - Convert the h5Seurat file to h5ad format
+cat(sprintf("Converting h5Seurat to h5ad format: %s\n", glue("{out}.h5seurat")))
 Convert(glue("{out}.h5seurat"), dest = "h5ad")
 
+cat(sprintf("Conversion complete. Output file: %s.h5ad\n", out))
+
+# ============================================================
+# Finalize logging
+# ============================================================
+
+
+sink(type="message")  # restore message output
+sink()                # restore stdout
+
+# replay each captured line as INFO
+for (line in LOG_LINES) {
+    log_info(line)
+}
+close(log_buffer)

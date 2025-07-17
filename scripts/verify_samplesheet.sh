@@ -19,7 +19,6 @@ log() {
     echo "$timestamp [$level]: $message"
 }
 
-
 #==========================================================
 # Variable Initialization
 #==========================================================
@@ -37,76 +36,24 @@ if [ ! -f "$samplesheet" ]; then
 fi
 log "INFO" "Found sample sheet: $samplesheet"
 
-EXPECTED_COLS=("id" "h5ad" "rds" "fasta" "annotation")
-REQUIRED_COLS=("id" "fasta" "annotation")
-data_paths=( "fasta" )
-
-
-#==========================================================
-# Helper Functions
-#==========================================================
-
-# Function to check if a column exists in the header
-column_exists() {
-    local col="$1"
-    if [[ "$header" != *"$col"* ]]; then 
-        log "ERROR" "Missing '$col' column in samplesheet" 
-        exit 1
-    fi
-}
-
-
 #==========================================================
 # Main Logic
 #==========================================================
 
-## CHECK THE COLUMN HEADERS
+## Enforce column order and existence
 # - Read the header
-log "INFO" "Reading header from sample sheet"
-read -r header < "$samplesheet"
-
-# - Ensure required columns exist
 echo ""
-log "INFO" "Checking columns in sample sheet"
-log "INFO" "Checking for required columns: '${REQUIRED_COLS[*]}'"
-for col in "${REQUIRED_COLS[@]}"; do
-    column_exists "$col"
-done
-log "INFO" "All required columns found in sample sheet"
+log "INFO" "Reading header from sample sheet"
+read -r header < "$samplesheet" 
 
-# - h5ad or rds column is required
-log "INFO" "Checking for 'h5ad' or 'rds' column in sample sheet" 
-if [[ "$header" == *"h5ad"* ]] || [[ "$header" == *"rds"* ]]; then
-    if [[ "$header" == *"h5ad"* ]] && [[ "$header" == *"rds"* ]]; then
-        log "WARNING" "Both 'h5ad' and 'rds' columns found. Using 'h5ad' for processing. Ignoring 'rds'"
-        data_paths+=( "h5ad" )
-    else
-        if [[ "$header" == *"h5ad"* ]]; then
-            log "INFO" "Found 'h5ad' column in samplesheet"
-            data_paths+=( "h5ad" )
-        else
-            log "INFO" "Using 'rds' column in samplesheet"
-            data_paths+=( "rds" )
-        fi
-    fi
+# - Check that the header matches expected columns
+log "INFO" "Checking header columns"
+if [[ "$header" == "id,matrix,fasta,annotation" ]]; then
+    log "INFO" "Header matches expected format"
 else
-    log "ERROR" "Missing 'h5ad' or 'rds' column in sample sheet"
+    log "ERROR" "Header does not match expected format: 'id,matrix,fasta,annotation'"
     exit 1
 fi
-
-# - Ensure no unexpected columns are present
-echo ""
-log "INFO" "Checking for unexpected columns in sample sheet"
-IFS=',' read -r -a header_cols <<< "$header"
-for col in "${header_cols[@]}"; do
-    # shellcheck disable=SC2076
-    if [[ ! " ${EXPECTED_COLS[*]} " =~ " $col " ]]; then
-        log "ERROR" "Unexpected column '$col' found in sample sheet"
-        exit 1
-    fi
-done
-log "INFO" "No unexpected columns found in sample sheet"
-
 
 ## CHECK THE DATA ENTRIES
 # - Ensure a minimum of two rows of data are present
@@ -120,59 +67,37 @@ fi
 log "INFO" "Minimum data rows check passed. Found $data_rows rows in sample sheet"
 
 # - Ensure all entries are populated and valid
-echo ""
-log "INFO" "Checking for valid entries in sample sheet"
+echo "" 
+log "INFO" "Checking data entries in sample sheet"
 line_num=1
-IFS=, read -r -a headers <<< "$header"
-cols="${headers[*]}"
-# shellcheck disable=SC2229
-# shellcheck disable=SC2086
-tail -n +2 "$samplesheet" | while IFS=, read -r $cols; do
+tail -n +2 "$samplesheet" | while IFS=, read -r id matrix fasta annotation; do 
     line_num=$((line_num + 1))
 
     # 1. Validate ID
-    # shellcheck disable=SC2154
     if [[ ! $id =~ ^[A-Za-z0-9_-]+$ ]]; then
         log "ERROR" "Line $line_num: Invalid id '$id' (only letters, digits, _ or - allowed)"
         exit 1
     fi
 
-    # 2. Validate data paths
-    for path in "${data_paths[@]}"; do
-        if [[ -z "${!path}" ]]; then
-            log "ERROR" "Line $line_num: Missing '$path' entry"
-            exit 1
-        fi
-        # Check file extension
-        case "$path" in
-            fasta)
-                if [[ ! "${!path}" =~ \.fa(sta)?$ ]]; then
-                    log "ERROR" "Line $line_num: '$path' entry '${!path}' does not end with .fa or .fasta"
-                    exit 1
-                fi
-                ;;
-            h5ad)
-                if [[ ! "${!path}" =~ \.h5ad$ ]]; then
-                    log "ERROR" "Line $line_num: '$path' entry '${!path}' does not end with .h5ad"
-                    exit 1
-                fi
-                ;;
-            rds)
-                if [[ ! "${!path}" =~ \.rds$ ]]; then
-                    log "ERROR" "Line $line_num: '$path' entry '${!path}' does not end with .rds"
-                    exit 1
-                fi
-                ;;
-        esac
-    done
+    # 2. Validate matrix
+    if [[ ! $matrix =~ \.rds$ ]] && [[ ! $matrix =~ \.h5ad ]]; then
+        log "ERROR" "Line $line_num: 'matrix' entry invalid '$matrix' (must end with .rds or .h5ad)"
+        exit 1
+    fi
 
-    # 3. Validate annotation
-    if [[ -z "$annotation" ]]; then 
-        log "ERROR" "Line $line_num: Missing 'annotation' entry"
+    # 3. Validate fasta
+    if [[ ! $fasta =~ \.fa(sta)?$ ]]; then
+        log "ERROR" "Line $line_num: 'fasta' entry invalid '$fasta' (must end with .fa or .fasta)"
+        exit 1
+    fi
+
+    # 4. Validate annotation
+    if [[ -z $annotation ]]; then
+        log "ERROR" "Line $line_num: 'annotation' entry is empty"
         exit 1
     fi
 done
-log "INFO" "All entries in sample sheet are valid"
+log "INFO" "All data entries validated successfully"
 
 echo ""
 log "INFO" "Sample sheet verification completed successfully"

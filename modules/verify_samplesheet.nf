@@ -6,7 +6,7 @@
  *      and contains the required columns.
  *
  *  Inputs:
- *      run_id:         Timestamp of the nextflow process
+ *      run_id:         ID of the nextflow process
  *      sample_sheet:   Path to the sample sheet
  *
  *  Outputs:

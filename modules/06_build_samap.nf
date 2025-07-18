@@ -40,6 +40,6 @@ process BUILD_SAMAP {
     build_samap.py \\
         --sams "${sams_list}" \\
         --maps "${maps_dir}" \\
-        --name "${run_id}_samap.pkl" | tee -a \$LOG
+        --name "samap.pkl" | tee -a \$LOG
     """
 }

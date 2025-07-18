@@ -1,5 +1,5 @@
 /*
- *  MODULE: verify_samplesheet.nf
+ *  MODULE: 00_verify_samplesheet.nf
  *
  *  Description: 
  *      Verifies the sample sheet is in the expected format

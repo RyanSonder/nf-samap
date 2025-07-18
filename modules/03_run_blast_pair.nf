@@ -31,12 +31,17 @@ process RUN_BLAST_PAIR {
 
     script:
     """
+    set -eou pipefail
+
+    LOG="${run_id}_${a.id2}${b.id2}_blast.log"
+    
+    chmod +x /usr/local/bin/map_genes.sh
+    
     fasta_a=\$(basename "${a.fasta}")
     cp "${a.fasta}" "\${fasta_a}"
     fasta_b=\$(basename "${b.fasta}")
     cp "${b.fasta}" "\${fasta_b}"
     
-    LOG="${run_id}_${a.id2}${b.id2}_blast.log"
     map_genes.sh \\
         --threads ${task.cpus} \\
         --tr1 "\${fasta_a}" --t1 ${a.type} --n1 ${a.id2} \\

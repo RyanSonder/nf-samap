@@ -32,7 +32,7 @@ class Args(NamedTuple):
     """
     input: str
     output_dir: Optional[str]
-    sample_sheet: Path
+    meta: str
 
 
 # --------------------------------------------------
@@ -59,17 +59,17 @@ def get_args() -> Args:
         default=".",
         help="Optional output directory for visualizations",
     )
-
+    
     parser.add_argument(
-        "--sample-sheet",
-        type=Path,
+        "--meta",
+        type=str,
         required=True,
-        help="Path to the sample sheet CSV",
+        help="String containing metadata for the samples"
     )
 
     args = parser.parse_args()
 
-    return Args(args.input, args.output_dir, args.sample_sheet)
+    return Args(args.input, args.output_dir, args.meta)
 
 
 # --------------------------------------------------
@@ -229,47 +229,30 @@ def save_scatter_plot(samap: SAMAP, output_dir: str, out_name='scatter', dpi=300
 
 
 # --------------------------------------------------
-def load_keys_from_sample_sheet(sample_sheet_path: Path) -> dict:
-    """
-    Load a dictionary of keys from the sample sheet CSV. The keys are 
-    mapped from id2 to their corresponding annotations.
-
-    Args:
-        sample_sheet_path (Path): Path to the sample sheet CSV.
-
-    Returns:
-        dict: Dictionary where the key is id2 and the value is the annotation.
-    """
-    keys = {}
-    with open(sample_sheet_path, newline="") as csvfile:
-        reader = csv.DictReader(csvfile)
-        for row in reader:
-            keys[row["id2"]] = row["annotation"]
-            log(f"  Loading annotation for {row['id2']}: {row['annotation']}", "INFO")
-    log("Successfully loaded all annotation keys")
-    return keys
-
-
-# --------------------------------------------------
 def main() -> None:
     """
     Visualize SAMAP results from a pickle file.
 
     This function:
     1. Loads the SAMAP object from the provided pickle file.
-    2. Loads sample annotations from the sample sheet.
+    2. Loads sample annotations from the metadata.
     3. Saves mapping scores, Sankey plot, chord plot, and scatter plot to the output directory.
-    """
-
+    """ 
+    
     log("Beginning execution of script", "INFO")
     args = get_args()
-    
     log(f"Attempting to create output directory at '{args.output_dir}'", "INFO")
     create_output_dir(args.output_dir)
     log(f"Attempting to load SAMAP pickle from '{args.input}'", "INFO")
     sm = load_samap_pickle(args.input)
-    log(f"Attempting to load annotation keys from '{args.sample_sheet}'", "INFO")
-    keys = load_keys_from_sample_sheet(args.sample_sheet)
+    log("Attempting to load annotation keys from sample metadata", "INFO")
+    keys = dict([
+        (
+            item.split(', ')[1].split(':', 1)[1],  # id2 value
+            item.split(', ')[4].split(':', 1)[1]   # annotation value
+        )
+        for item in args.meta.strip('[]').split('], [')
+    ])    
     
     # Save and get mapping scores and use them to generate plots
     log("Attempting to save mapping scores")

@@ -1,5 +1,5 @@
 /*
- *  MODULE: visualize_samap.nf
+ *  MODULE: 08_visualize_samap.nf
  *
  *  Description: 
  *      Produces several visualizations from analysis.py from 
@@ -27,7 +27,7 @@ process VISUALIZE_SAMAP {
     input:
         val run_id
         path samap_obj
-        path sample_sheet
+        val meta_str
 
     output:
         path "chord.html"
@@ -39,7 +39,16 @@ process VISUALIZE_SAMAP {
 
     script:
     """
+    set -euo pipefail
+
+    chmod +x /usr/local/bin/visualize_samap.py
+
     LOG="${run_id}_viz.log"
-    visualize_samap.py --input ${samap_obj} --sample-sheet ${sample_sheet} 2>&1 | tee -a \$LOG
+
+    echo "${meta_str}" 
+
+    visualize_samap.py \\
+        --input "${samap_obj}" \\
+        --meta "${meta_str}" 2>&1 | tee -a \$LOG
     """
 }

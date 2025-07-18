@@ -9,10 +9,8 @@ Purpose: Visualize SAMAP results from pickle
 import argparse
 import os
 import pickle
-import csv
 from log_utils import log
 from typing import NamedTuple, Optional
-from pathlib import Path
 from samap.mapping import SAMAP
 from samap.analysis import get_mapping_scores, sankey_plot, chord_plot
 import matplotlib.pyplot as plt

@@ -1,5 +1,5 @@
 /*
- *  MODULE: ensure_h5ad.nf
+ *  MODULE: 01_ensure_h5ad.nf
  *
  *  Description: 
  *      Converts RDS file to H5AD if needed.

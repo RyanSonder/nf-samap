@@ -1,5 +1,5 @@
 /*
- *  MODULE: run_samap.nf
+ *  MODULE: 07_run_samap.nf
  *
  *  Description: 
  *      Runs the SAMap algorithm on a SAMAP object
@@ -27,7 +27,14 @@ process RUN_SAMAP {
 
     script:
     """
+    set -euo pipefail
+
+    chmod +x /usr/local/bin/run_samap.py
+
     LOG=${run_id}_run_samap.log
-    run_samap.py -i ${samap_object} 2>&1 | tee -a \$LOG
+
+    run_samap.py \\
+        -i ${samap_object} \\
+        --name "samap_results.pkl" 2>&1 | tee -a \$LOG
     """
 }

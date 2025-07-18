@@ -26,7 +26,7 @@ process BUILD_SAMAP {
         path data_dir
 
     output:
-    //     path "samap.pkl", emit: samap
+        path "samap.pkl", emit: samap
         path "*.log", emit: logfile
 
     script:

@@ -8,6 +8,7 @@
  *      run_id:         Timestamp of the nextflow process
  *      meta_ch:        Channel containing metadata for the sample
  *      data_dir:       Staging the data directory so the script can access it
+ *      h5ad_files:     Path to the h5ad files containing the SAM objects
  *
  *  Outputs:
  *      A pickled SAM object
@@ -21,6 +22,7 @@ process LOAD_SAM {
         val run_id
         val meta_ch
         path data_dir 
+        path h5ad_files
 
     output:
         path "*.pkl", emit: sam

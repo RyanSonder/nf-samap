@@ -22,4 +22,4 @@ docker-shell-blast:
 clean:
 	rm -rf work/*
 	rm -rf .nextflow*
-	rm -rf results/*
+	rm -rf out/*

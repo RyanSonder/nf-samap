@@ -2,17 +2,16 @@
 """
 Author : Ryan Sonderman
 Date   : 2025-06-16
-Version: 1.0.0
+Version: 1.1.0
 Purpose: Build a SAMAP object from sams and maps
 """
 
 import argparse
-import csv
 import pickle
 import os
 from log_utils import log
 from samap.mapping import SAMAP
-from samap.utils import save_samap
+from samap.utils import save_samap  # noqa: F401
 from typing import NamedTuple
 from pathlib import Path
 
@@ -20,11 +19,10 @@ from pathlib import Path
 class Args(NamedTuple):
     """ Command-line arguments for the script"""
     
-    sams_dir: Path      # Directory containing SAM pickles
-    sample_sheet: Path  # Path to the sample sheet CSV file
+    sams: str           # List of SAM pickle files to load
     maps: Path          # Path to the maps directory
     name: str           # Name of the output pickle
-    output_dir: Path    # Path to the output directory
+    outdir: Path    # Path to the output directory
 
 
 # --------------------------------------------------
@@ -40,18 +38,10 @@ def get_args() -> Args:
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
     parser.add_argument(
-        '-d', '--sams-dir',
-        required=False,
-        type=Path,
-        help='Directory containing SAM pickle files',
-        default=Path('.')
-    )
-
-    parser.add_argument(
-        '-s', '--sample-sheet',
+        '--sams',
         required=True,
-        type=Path,
-        help='Path to the sample sheet CSV file'
+        type=str,
+        help='List of SAM pickle files to load',
     )
 
     parser.add_argument(
@@ -70,7 +60,7 @@ def get_args() -> Args:
     )
     
     parser.add_argument(
-        '-o', '--output_dir',
+        '-o', '--outdir',
         required=False,
         type=Path,
         help='Path to the output directory',
@@ -78,72 +68,39 @@ def get_args() -> Args:
     )
 
     args = parser.parse_args()
-    return Args(args.sams_dir, args.sample_sheet, args.maps, args.name, args.output_dir)
-
+    return Args(args.sams, args.maps, args.name, args.outdir)
 
 # --------------------------------------------------
-def load_species_dict(sample_sheet_path: Path, sams_dir: Path) -> dict:
+def load_pkl(file_path: str):
     """
-    Load a dictionary of species, mapping id2 to corresponding SAM objects from the sams_dir directory.
+    Load a pickle file.
 
     Args:
-        sample_sheet_path (Path): Path to the sample sheet CSV file.
-        sams_dir (Path): Path to the directory containing the SAM pickle files.
+        file_path (str): Path to the pickle file.
 
     Returns:
-        dict: A dictionary with id2 as the key and the corresponding SAM object as the value.
+        The loaded object from the pickle file.
     """
-    species = {}
-    with open(sample_sheet_path, newline="") as csvfile:
-        reader = csv.DictReader(csvfile)
-        for row in reader:
-            id2 = row["id2"]
-            log(f"  Attempting to load SAM pickle for '{id2}'", "INFO")
-            # Find the pickle file in sams_dir that starts with id2 
-            matching_files = list(sams_dir.glob(f"{id2}*.pkl"))
-            if not matching_files:
-                log(f"  No SAM pickle found for '{id2}' in '{sams_dir}'", "ERROR")
-            sam_path = matching_files[0]
-            with open(sam_path, "rb") as f:
-                species[id2] = pickle.load(f)
-            log(f"  Loaded SAM for '{id2}' from '{sam_path}'", "INFO")
-    return species
+    with open(file_path, 'rb') as f:
+        return pickle.load(f)
 
 
 # --------------------------------------------------
 def main() -> None:
-    """
-    Main entry point for the script.
-
-    This function:
-    1. Parses command-line arguments.
-    2. Loads the species dictionary from the sample sheet and SAM files.
-    3. Validates the maps directory.
-    4. Creates a SAMAP object using the loaded species and maps data.
-    5. Saves the SAMAP object to a pickle file.
-    """
-
-    # Parse command-line arguments
-    log("Loading arguments", "INFO")
-    args = get_args()
-    sams_dir = args.sams_dir
-    log(f"  Using SAMs directory '{sams_dir}'", "DEBUG")
-    maps = str(args.maps)
-    log(f"  Using maps directory '{maps}'", "DEBUG")
-    sample_sheet = args.sample_sheet
-    log(f"  Using sample sheet '{sample_sheet}'", "DEBUG")
-    name = args.name
-    log(f"  SAMAP object will be saved with name '{name}'", "DEBUG")
-    output_dir = args.output_dir
-    log(f"  SAMAP object will be saved to '{output_dir}'", "DEBUG")
     
-    # Load species dictionary from sample sheet
-    log("Loading species dictionary from sample sheet", "INFO")
-    species_dict = load_species_dict(sample_sheet, sams_dir)
-    log(f"Loaded species dictionary with {len(species_dict)} entries", "INFO")
+    # 1. Parse command-line arguments
+    log("Loading arguments", "INFO")
+    args   = get_args()
+    sams   = args.sams
+    maps   = str(args.maps)
+    name   = args.name
+    outdir = args.outdir
+    
+    # 2. Build the species dictionary from the SAMs
+    log("Building species dictionary from SAMs", "INFO")
+    species_dict = dict([(os.path.basename(sam)[:2], load_pkl(sam)) for sam in sams.lstrip('[').rstrip(']').split(', ')]) 
 
-
-    # Ensure maps is valid and formatted correctly
+    # 3. Ensure correct structure of the maps directory
     log(f"Ensuring validity of '{maps}'", "INFO")
     if not maps.endswith('/'): # SAMap *will* crash if passed a dir without a '/'
         maps += '/'
@@ -157,20 +114,19 @@ def main() -> None:
         for map_file in Path(maps).rglob('*.txt'):  # Use rglob for recursive search
             log(f"  Found map file '{map_file}", "DEBUG")
 
-
-    # Create SAMAP object
+    # 4. Create the SAMAP object
     log("Attempting to create SAMAP object", "INFO")
     samap = SAMAP(
         sams=species_dict,
-        f_maps=maps,
+        f_maps=str(maps),
         save_processed=False,
     )
     log("Successfully created SAMAP object with {len(samap.sams)} SAMs", "INFO")
-    
+
     # Save SAMAP object
     log("Attempting to pickle SAMAP object", "INFO")
-    save_samap(samap, os.path.join(output_dir, name))
-    log(f"Successfully pickled SAMAP object '{name}' to '{output_dir}'")
+    save_samap(samap, os.path.join(outdir, name))
+    log(f"Successfully pickled SAMAP object '{name}' to '{outdir}'")
 
 # --------------------------------------------------
 if __name__ == '__main__':

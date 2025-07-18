@@ -1,5 +1,5 @@
 /*
- *  MODULE: classify_fasta.nf
+ *  MODULE: 02_classify_fasta.nf
  *
  *  Description: 
  *      Classifies a .fasta file as either protein 

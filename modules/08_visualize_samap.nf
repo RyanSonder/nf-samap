@@ -8,7 +8,7 @@
  *  Inputs:
  *      run_id:         Timestamp of the nextflow process
  *      samap_object:   Channel containing a pickled SAMAP object
- *      sample_sheet:   Path to the sample sheet CSV with sample metadata
+ *      meta_str:       String containing sample metadata in a specific format
  *
  *  Outputs:
  *      Several visualizations about the SAMap results and a logfile

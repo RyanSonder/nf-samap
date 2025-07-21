@@ -1,7 +1,0 @@
-id,h5ad,fasta,annotation
-00,data/planarian.h5ad,data/head/planarian_transcriptome.fasta,cluster
-01,data/hydra_mod.h5ad,data/head/hydra_transcriptome.fasta,Cluster
-02,data/schistosome.h5ad,data/head/schistosome_proteome.fasta,tissue
-
-id,rds,h5ad,fasta,annotation
-L859D,data/hypo.rds,/data/L859D.h5ad,/data/transcriptome/mus_Musculus.fasta,Cluster

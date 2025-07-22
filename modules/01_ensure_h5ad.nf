@@ -38,11 +38,11 @@ process ENSURE_H5AD {
 
     if [[ "\$matrix" == *.rds ]]; then
         tee -a "\$LOG" <<< "\$(date +'%Y-%m-%d %H:%M:%S.%3N') [INFO]: Converting RDS to H5AD for sample: \$id" > /dev/null
-        rds_to_h5ad.R \\
+        tee -a "\$LOG" <<< rds_to_h5ad.R \\
             --rds "\$matrix" \\
             --out "\${id}" \\
             --ident "\${id}" \\
-            2>&1 | tee -a "\$LOG" > /dev/null
+            > /dev/null
         echo "\${id}.h5ad"
     elif [[ "\$matrix" == *.h5ad ]]; then
         tee -a "\$(date +'%Y-%m-%d %H:%M:%S.%3N') [INFO]: Matrix is already in H5AD format: \$matrix" > /dev/null

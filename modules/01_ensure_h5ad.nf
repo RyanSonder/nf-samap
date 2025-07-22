@@ -42,7 +42,6 @@ process ENSURE_H5AD {
             --rds "\$matrix" \\
             --out "\${id}" \\
             --ident "\${id}" \\
-            --meta_field "orig.ident" \\
             2>&1 | tee -a "\$LOG" > /dev/null
         echo "\${id}.h5ad"
     elif [[ "\$matrix" == *.h5ad ]]; then

@@ -8,23 +8,6 @@
 
 
 # ============================================================
-# Logging utility
-# ============================================================
-
-log_msg <- function(level, ...) {
-    timestamp <- format(Sys.time(), "%Y-%m-%d %H:%M:%OS3")
-    msg <- paste(..., collapse = " ")
-    cat(sprintf("%s [%s]: %s\n", timestamp, level, msg))
-}
-
-log_info <- function(...) log_msg("INFO", ...)
-log_error <- function(...) log_msg("ERROR", ...)
-
-log_buffer <- textConnection("LOG_LINES", "w")
-sink(log_buffer,          split = TRUE)        #redirect all stdout into LOG
-sink(log_buffer, type="message", split = TRUE) #redirect all messages
-
-# ============================================================
 # Load in the required libraries
 # ============================================================
 
@@ -104,17 +87,3 @@ cat("Converting h5Seurat to h5ad format: %s\n", glue("{out}.h5seurat"))
 Convert(glue("{out}.h5seurat"), dest = "h5ad", overwrite = TRUE)
 
 cat("Conversion complete. Output file: %s.h5ad\n", out)
-
-# ============================================================
-# Finalize logging
-# ============================================================
-
-
-sink(type="message")  # restore message output
-sink()                # restore stdout
-
-# replay each captured line as INFO
-for (line in LOG_LINES) {
-    log_info(line)
-}
-close(log_buffer)

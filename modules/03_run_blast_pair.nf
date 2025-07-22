@@ -33,9 +33,7 @@ process RUN_BLAST_PAIR {
     set -eou pipefail
 
     LOG="${run_id}_${a.id2}${b.id2}_blast.log"
-    
-    chmod +x /usr/local/bin/map_genes.sh
-    
+        
     fasta_a=\$(basename "${a.fasta}")
     cp "${a.fasta}" "\${fasta_a}"
     fasta_b=\$(basename "${b.fasta}")

@@ -34,8 +34,6 @@ process LOAD_SAM {
 
     LOG="${run_id}_${meta_ch.id}_load_sams.log"
 
-    chmod +x /usr/local/bin/load_sam.py
-
     load_sam.py \\
         --id2 "${meta_ch.id2}" \\
         --h5ad "${meta_ch.matrix}" 2>&1 | tee -a \$LOG

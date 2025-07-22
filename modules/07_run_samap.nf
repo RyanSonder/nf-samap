@@ -29,8 +29,6 @@ process RUN_SAMAP {
     """
     set -euo pipefail
 
-    chmod +x /usr/local/bin/run_samap.py
-
     LOG=${run_id}_run_samap.log
 
     run_samap.py \\

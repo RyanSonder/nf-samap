@@ -35,8 +35,6 @@ process BUILD_SAMAP {
 
     LOG="${run_id}_build_samap.log"
 
-    chmod +x /usr/local/bin/build_samap.py
-
     build_samap.py \\
         --sams "${sams_list}" \\
         --maps "${maps_dir}" \\

@@ -41,8 +41,6 @@ process VISUALIZE_SAMAP {
     """
     set -euo pipefail
 
-    chmod +x /usr/local/bin/visualize_samap.py
-
     LOG="${run_id}_viz.log"
 
     echo "${meta_str}" 

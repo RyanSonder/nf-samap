@@ -32,8 +32,6 @@ process VERIFY_SAMPLESHEET {
 
     LOG="${run_id}_verify_samplesheet.log"
 
-    chmod +x /usr/local/bin/verify_samplesheet.sh
-
     verify_samplesheet.sh ${sample_sheet} 2>&1 | tee -a \$LOG
     """
 }

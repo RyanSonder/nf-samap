@@ -33,8 +33,6 @@ process ENSURE_H5AD {
 
     LOG="${run_id}_${sample_meta.id}_ensure_h5ad.log"
 
-    chmod +x /usr/local/bin/rds_to_h5ad.R
-
     matrix="${sample_meta.matrix}"
     id="${sample_meta.id}"
 

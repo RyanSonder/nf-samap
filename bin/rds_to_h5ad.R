@@ -7,6 +7,15 @@
 # Purpose: RDS to H5AD conversion for SAMap
 
 
+#— print every expression as it runs
+options(echo = TRUE)
+
+#— print a full stack trace on error
+options(error = function() {
+  traceback()
+  quit(status = 1)
+})
+
 # ============================================================
 # Load in the required libraries
 # ============================================================
@@ -25,7 +34,6 @@ opt_list <- list(
     "--rds"     = NA,
     "--out"     = NA,
     "--ident"   = NA,
-    "--meta_field" = NA
 )
 
 for(i in seq(1, length(args), by=2)) {
@@ -42,7 +50,6 @@ for(i in seq(1, length(args), by=2)) {
 rds <- opt_list[["--rds"]]
 out <- opt_list[["--out"]]
 ident <- opt_list[["--ident"]]
-meta_field <- opt_list[["--meta_field"]]
 
 if (!file.exists(rds)) {
     sprintf("RDS file not found: %s\n", rds)

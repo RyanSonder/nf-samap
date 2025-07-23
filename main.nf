@@ -30,7 +30,8 @@
  *      --data_dir      Path to the directory containing the data. Default: 'data'
  *      --maps_dir      Path to a directory containing precomputed BLAST maps if any are provided. 
  *                      Any value other than null will skip the BLAST module. Default: null
- *      --outdir   The directory all where all results will be stored. Default: 'out'
+ *      --verbose       Print verbose channel information
+ *      --outdir        The directory all where all results will be stored. Default: 'out'
  *
  * Outputs:
  *      outdir/
@@ -49,97 +50,113 @@
  */
 
 // Import the required modules 
-include { VERIFY_SAMPLESHEET }  from './modules/00_verify_samplesheet.nf'
-include { ENSURE_H5AD }         from './modules/01_ensure_h5ad.nf'
-include { CLASSIFY_FASTA }      from './modules/02_classify_fasta.nf'
-include { RUN_BLAST_PAIR }      from './modules/03_run_blast_pair.nf'
-include { MERGE_MAPS }          from './modules/04_merge_maps.nf'
-include { LOAD_SAM }            from './modules/05_load_sam.nf'
-include { BUILD_SAMAP }         from './modules/06_build_samap.nf'
-include { RUN_SAMAP }           from './modules/07_run_samap.nf'
-include { VISUALIZE_SAMAP }     from './modules/08_visualize_samap.nf'
+include { VERIFY_SAMPLESHEET } from './modules/00_verify_samplesheet.nf'
+include { ENSURE_H5AD        } from './modules/01_ensure_h5ad.nf'
+include { CLASSIFY_FASTA     } from './modules/02_classify_fasta.nf'
+include { RUN_BLAST_PAIR     } from './modules/03_run_blast_pair.nf'
+include { MERGE_MAPS         } from './modules/04_merge_maps.nf'
+include { LOAD_SAM           } from './modules/05_load_sam.nf'
+include { BUILD_SAMAP        } from './modules/06_build_samap.nf'
+include { RUN_SAMAP          } from './modules/07_run_samap.nf'
+include { VISUALIZE_SAMAP    } from './modules/08_visualize_samap.nf'
 
 workflow {
-    // Generate run ID unless one is provided
+    // ╔═ PREPROCESSING STEPS ════════════════════════════════════════════════════════╗
+    // ║                                                                              ║
+    // ╚══════════════════════════════════════════════════════════════════════════════╝
+
     run_id = params.run_id ?: "${new Date().format('yyyyMMdd_HHmmss')}"
     run_id_ch = Channel.value(run_id)
     // params.outdir = "${params.outdir}/${run_id}" // Not working gotta fix it later
     
-
-    // Stage static input files
     data_dir        = Channel.fromPath(params.data_dir)
     sample_sheet    = Channel.fromPath(params.sample_sheet)
 
 
-    // Verify the sample sheet format and required columns
+    // ╔═ VERIFY THE SAMPLESHEET ═════════════════════════════════════════════════════╗
+    // ║                                                                              ║
+    // ╚══════════════════════════════════════════════════════════════════════════════╝
+
+
     VERIFY_SAMPLESHEET(
         run_id_ch,
         sample_sheet,
     )
     sample_sheet = VERIFY_SAMPLESHEET.out.sample_sheet
-
-
     // Read the sample sheet and store the metadata in a channel of dicts
     meta_ch = sample_sheet
         .splitCsv(header: true)
         .map { row ->
-            row + [
-                id: row.id,
-                matrix: file(row.matrix),
-                fasta: file(row.fasta),
+            def sample_meta = [
+                id:         row.id,
+                id2:        row.id2,
                 annotation: row.annotation,
             ]
+            def matrix = file(row.matrix)
+            def fasta  = file(row.fasta)
+            tuple( sample_meta, matrix, fasta )
         }
-    // samples_ch.view { it -> "Sample sheet: ${it}" }
+    params.verbose && meta_ch.view { it -> "Sample: ${it}\n" }
 
 
-    // Ensure all samples have h5ad files
+    // ╔═ MAKE SURE MATRIX FILES ARE H5AD ════════════════════════════════════════════╗
+    // ║                                                                              ║
+    // ╚══════════════════════════════════════════════════════════════════════════════╝
+
+
     ENSURE_H5AD(
         run_id_ch,
         meta_ch,
-        data_dir.first()
     )
-    converted_h5ad_ch = ENSURE_H5AD.out.converted_matrix
-    h5ad_files = ENSURE_H5AD.out.h5ad_file
-    // Add converted matrices to the metadata
-    converted_meta_ch = converted_h5ad_ch
-        .map { meta, h5ad_file ->
-            meta + [ matrix: h5ad_file.trim() ]
-        }
+    converted_meta_ch = ENSURE_H5AD.out.converted_meta
+    h5ad_files        = ENSURE_H5AD.out.h5ad_file
+    params.verbose && converted_meta_ch.view { it -> "Converted meta channel: ${it}\n" }
+    params.verbose && h5ad_files.view        { it -> "H5AD files channel: ${it}\n"     }
 
 
-    // Classify FASTA files as either nucleotide or protein
+    // ╔═ CLASSIFY THE FASTA AS PROTEIN OR NUCLEOTIDE ════════════════════════════════╗
+    // ║                                                                              ║
+    // ╚══════════════════════════════════════════════════════════════════════════════╝
+
+
     CLASSIFY_FASTA(
         run_id_ch,
         converted_meta_ch,
-        data_dir.first()
     )
-    classified_fasta_ch = CLASSIFY_FASTA.out.classified_sample
-
-
-    // Inject the new classifications as 'type'
-    classified_meta_ch = classified_fasta_ch
-        .map { meta, classification ->
-            meta + [ type: classification.trim() ]
+    classified_meta_ch_raw = CLASSIFY_FASTA.out.classified_sample_raw
+    params.verbose && classified_meta_ch_raw.view { it -> "Raw classified meta channel: ${it}\n" }
+    // Put the classification into the sample_meta
+    classified_meta_ch = classified_meta_ch_raw
+        .map { row ->
+            def sample_meta    = row[0]
+            def matrix_file    = row[1]
+            def fasta_file     = row[2]
+            def classification = row[3].trim()
+            def updated_meta = sample_meta + [ type: classification ]
+            tuple( updated_meta, matrix_file, fasta_file )
         }
-    // classified_meta_ch.view()
+    params.verbose && classified_meta_ch.view { it -> "Classified meta channel: ${it}\n" }
 
 
-    // Run pairwise blast comparisons if no maps were passed as param
+    // ╔═ RUN PAIRWISE BLAST COMPARISONS ═════════════════════════════════════════════╗
+    // ║                                                                              ║
+    // ╚══════════════════════════════════════════════════════════════════════════════╝
+
+
     if (params.maps_dir) {
         maps_dir = Channel.fromPath(params.maps_dir)
     } else {
-        // Generate unique ordered pairs
         pairs_channel = classified_meta_ch
             .combine(classified_meta_ch)
-            .filter { a, b -> a.id < b.id }
-        // pairs_channel.view { it -> "Pairs channel: ${it}" }
-        // Compute BLAST maps from pairs channel
+            .filter { metaA, _matA, _fasA, metaB, _matB, _fasB -> 
+            metaA.id < metaB.id }
+        params.verbose && pairs_channel.view { it -> "Pairs channel: ${it}\n" }
+
         RUN_BLAST_PAIR(
             run_id_ch,
             pairs_channel,
-            data_dir.first(),
         )
+
         maps_ch = RUN_BLAST_PAIR.out.maps
             .collect()
             .flatten()
@@ -147,31 +164,39 @@ workflow {
             .distinct()
             .collect()
             .map { it -> tuple(it) }
-        // Merge the maps into a single directory
+        params.verbose && maps_ch.view { it -> "Maps channel: ${it}\n" }
+
         MERGE_MAPS(
             run_id,
             maps_ch
         )
+
         maps_dir = MERGE_MAPS.out.maps
+        params.verbose && maps_dir.view { it -> "Maps directory: ${it}\n"}
     }
 
 
-    // Load SAM objects from the AnnData h5ad files
+    // ╔═ LOAD THE H5AD FILES INTO SAM OBJECTS ═══════════════════════════════════════╗
+    // ║                                                                              ║
+    // ╚══════════════════════════════════════════════════════════════════════════════╝
+
+
     LOAD_SAM(
         run_id_ch,
         classified_meta_ch,
-        data_dir.first(),
-        h5ad_files,
     )
     sams = LOAD_SAM.out.sam
-    // sams.view { it -> "Loaded SAM objects: ${it}" }
+    params.verbose && sams.view { it -> "Loaded SAM object: ${it}\n" }
 
 
+    // ╔═ USE THE SAM OBJECTS AND BLAST MAPPINGS TO BUILD A SAMAP OBJECT ═════════════╗
+    // ║                                                                              ║
+    // ╚══════════════════════════════════════════════════════════════════════════════╝
 
-    // Build the SAMap object from the SAM objects and the BLAST maps
+
     sams_list = sams
         .collect()
-    // sams_list.view { it -> "SAM objects list: ${it}" }
+    params.verbose && sams_list.view { it -> "SAM objects list: ${it}\n" }
     BUILD_SAMAP(
         run_id_ch,
         sams_list,
@@ -179,17 +204,27 @@ workflow {
         data_dir,
     )
     samap = BUILD_SAMAP.out.samap
+    params.verbose && samap.view { it -> "SAMAP ojbect: ${it}\n" }
 
 
-    // Run SAMap on the SAMAP object to generate mapping results
+    // ╔═ RUN THE SAMAP ALGORITHM ON THE NEW OBJECT ══════════════════════════════════╗
+    // ║                                                                              ║
+    // ╚══════════════════════════════════════════════════════════════════════════════╝
+
+
     RUN_SAMAP(
         run_id_ch,
         samap,
     )
     samap_results = RUN_SAMAP.out.results
+    params.verbose && samap_results.view { it -> "SAMAP results: ${it}\n" }
 
 
-    // Visualize the SAMap results
+    // ╔═ VISUALIZE THE RESULTS OF SAMAP ═════════════════════════════════════════════╗
+    // ║                                                                              ║
+    // ╚══════════════════════════════════════════════════════════════════════════════╝
+
+
     VISUALIZE_SAMAP(
         run_id_ch,
         samap_results,

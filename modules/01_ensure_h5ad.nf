@@ -19,12 +19,12 @@ process ENSURE_H5AD {
 
     input:
         val run_id
-        val sample_meta
-        path data_dir
+        tuple val (sample_meta), path(matrix), path(fasta)
 
     output:
         path "*.log", emit: logfile
-        tuple val(sample_meta), stdout, emit: converted_matrix
+        // tuple val(sample_meta), path("${sample_meta.id}.h5ad"), emit: converted_matrix
+        tuple val(sample_meta), path("${sample_meta.id}.h5ad"), path(fasta), emit: converted_meta
         path "${sample_meta.id}.h5ad", emit: h5ad_file
 
     script:
@@ -33,9 +33,11 @@ process ENSURE_H5AD {
 
     LOG="${run_id}_${sample_meta.id}_ensure_h5ad.log"
 
-    matrix="${sample_meta.matrix}"
+    matrix="${matrix}"
     id="${sample_meta.id}"
 
+    tee -a "\$LOG" <<< "\$(date +'%Y-%m-%d %H:%M:%S.%3N') [INFO]: Using matrix file '\${matrix}' with ID '\${id}'"
+    
     if [[ "\$matrix" == *.rds ]]; then
         tee -a "\$LOG" <<< "\$(date +'%Y-%m-%d %H:%M:%S.%3N') [INFO]: Converting RDS to H5AD for sample: \$id" > /dev/null
         rds_to_h5ad.R \\
@@ -50,7 +52,7 @@ process ENSURE_H5AD {
         echo "\${id}.h5ad"
     else 
         tee -a "\$(date +'%Y-%m-%d %H:%M:%S.%3N') [ERROR]: Unsupported file format for matrix: \$matrix" > /dev/null
-        exit 1
+        exit 65
     fi
     """
 }

@@ -17,12 +17,12 @@
  */
 
 process RUN_BLAST_PAIR {
-    tag "${run_id} - ${a.id2}_vs_${b.id2}"
+    tag "${run_id} - ${metaA.id2}_vs_${metaB.id2}"
 
     input:
         val run_id
-        tuple val(a), val(b)
-        path data_dir
+        tuple val(metaA), path(matA), path(fasA, stageAs: 'A/*'), 
+              val(metaB), path(matB), path(fasB, stageAs: 'B/*')
 
     output:
         path "maps/*/*_to_*.txt", emit: maps
@@ -32,17 +32,17 @@ process RUN_BLAST_PAIR {
     """
     set -eou pipefail
 
-    LOG="${run_id}_${a.id2}${b.id2}_blast.log"
+    LOG="${run_id}_${metaA.id2}${metaB.id2}_blast.log"
         
-    fasta_a=\$(basename "${a.fasta}")
-    cp "${a.fasta}" "\${fasta_a}"
-    fasta_b=\$(basename "${b.fasta}")
-    cp "${b.fasta}" "\${fasta_b}"
+    fasta_a=\$(basename "${fasA}")
+    cp "${fasA}" "\${fasta_a}"
+    fasta_b=\$(basename "${fasB}")
+    cp "${fasB}" "\${fasta_b}"
     
     map_genes.sh \\
         --threads ${task.cpus} \\
-        --tr1 "\${fasta_a}" --t1 ${a.type} --n1 ${a.id2} \\
-        --tr2 "\${fasta_b}" --t2 ${b.type} --n2 ${b.id2} | \\
+        --tr1 "\${fasta_a}" --t1 ${metaA.type} --n1 ${metaA.id2} \\
+        --tr2 "\${fasta_b}" --t2 ${metaB.type} --n2 ${metaB.id2} | \\
         while IFS= read -r line; do
             echo "[\$(date +'%Y-%m-%d %H:%M:%S.%3N')] \$line"
         done 2>&1 | tee -a \$LOG

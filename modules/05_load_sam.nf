@@ -16,13 +16,11 @@
  */
 
 process LOAD_SAM {
-    tag "${run_id} - ${meta_ch.id} load and pickle SAM objects"
+    tag "${run_id} - ${sample_meta.id} load and pickle SAM objects"
 
     input:
         val run_id
-        val meta_ch
-        path data_dir 
-        path h5ad_files
+        tuple val(sample_meta), path(matrix), path(fasta)
 
     output:
         path "*.pkl", emit: sam
@@ -32,10 +30,10 @@ process LOAD_SAM {
     """
     set -euo pipefail
 
-    LOG="${run_id}_${meta_ch.id}_load_sams.log"
+    LOG="${run_id}_${sample_meta.id}_load_sams.log"
 
     load_sam.py \\
-        --id2 "${meta_ch.id2}" \\
-        --h5ad "${meta_ch.matrix}" 2>&1 | tee -a \$LOG
+        --id2 "${sample_meta.id2}" \\
+        --h5ad "${matrix}" 2>&1 | tee -a \$LOG
     """
 }

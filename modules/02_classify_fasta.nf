@@ -20,12 +20,11 @@ process CLASSIFY_FASTA {
 
     input:
         val run_id
-        val sample_meta
-        path data_dir
+        tuple val (sample_meta), path(matrix), path(fasta)
 
     output:
         path "*.log", emit: logfile
-        tuple val(sample_meta), stdout, emit: classified_sample
+        tuple val(sample_meta), path(matrix), path(fasta), stdout, emit: classified_sample_raw
 
     script:
     """
@@ -33,7 +32,7 @@ process CLASSIFY_FASTA {
 
     LOG="${run_id}_${sample_meta.id}_classify.log"
 
-    fasta="${sample_meta.fasta}"
+    fasta="${fasta}"
     tee -a "\$LOG" <<< "\$(date +'%Y-%m-%d %H:%M:%S.%3N') [INFO]: Found fasta: \${fasta}" > /dev/null
     
     line=\$(grep -m1 -v '^>' "\$fasta" | head -n 1)

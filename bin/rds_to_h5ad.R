@@ -7,9 +7,6 @@
 # Purpose: RDS to H5AD conversion for SAMap
 
 
-#— print every expression as it runs
-options(echo = TRUE)
-
 #— print a full stack trace on error
 options(error = function() {
   traceback()

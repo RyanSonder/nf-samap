@@ -51,6 +51,8 @@ ident <- opt_list[["--ident"]]
 if (!file.exists(rds)) {
     sprintf("RDS file not found: %s\n", rds)
     stop("RDS not found: %s", rds)
+} else {
+    sprintf("RDS file found")
 }
 
 # ============================================================

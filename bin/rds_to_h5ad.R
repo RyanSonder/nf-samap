@@ -39,7 +39,7 @@ for(i in seq(1, length(args), by=2)) {
     if (key %in% names(opt_list)) {
         opt_list[[key]] <- val
     } else {
-        sprintf("Unknown argument: %s\n", key)
+        cat(sprintf("Unknown argument: %s", key))
         stop("Unknown argument: ", key)
     }
 }
@@ -49,10 +49,10 @@ out <- opt_list[["--out"]]
 ident <- opt_list[["--ident"]]
 
 if (!file.exists(rds)) {
-    sprintf("RDS file not found: %s\n", rds)
+    cat(sprintf("RDS file not found: %s", rds))
     stop("RDS not found: %s", rds)
 } else {
-    sprintf("RDS file found")
+    cat(sprintf("RDS file found"))
 }
 
 # ============================================================
@@ -60,36 +60,36 @@ if (!file.exists(rds)) {
 # ============================================================
 
 # - Load the RDS file
-sprintf("Loading RDS file: %s\n", rds)
+cat(sprintf("Loading RDS file: %s", rds))
 so <- readRDS(rds)
 
 # - Convert to V3 object (h5ad conversion does not work on V5)
-sprintf("Converting Seurat object to V3\n")
+cat(sprintf("Converting Seurat object to V3"))
 so[["RNA3"]] <- as(so[["RNA"]], Class = "Assay")
 DefaultAssay(so) <- "RNA3"
 so[["RNA"]] <- NULL
 so <- RenameAssays(so, RNA3 = "RNA")
 
 # - Find list of barcodes
-sprintf("Getting list of barcodes from Seurat object\n")
+cat(sprintf("Getting list of barcodes from Seurat object"))
 barcodes <- colnames(so)
-sprintf("Discovered %d barcodes\n", length(barcodes))
+cat(sprintf("Discovered %d barcodes", length(barcodes)))
 
 # - Get the barcodes matching the sample ident
-sprintf("Selecting barcodes matching %s\n", ident)
+cat(sprintf("Selecting barcodes matching %s", ident))
 bcs_subset <- grep(ident, barcodes, value = TRUE)
-sprintf("Selected %d barcodes\n", length(bcs_subset))
+cat(sprintf("Selected %d barcodes", length(bcs_subset)))
 
 # - Subset the Seurat object basted on the barcodes subset
-sprintf("Subsetting Seurat object based on selected barcodes\n")
+cat(sprintf("Subsetting Seurat object based on selected barcodes"))
 so_subset <- subset(so, cells = bcs_subset)
 
 # - Save the Seurat object to h5Seurat format
-sprintf("Saving subset data to h5Seurat format: %s\n", out)
+cat(sprintf("Saving subset data to h5Seurat format: %s", out))
 SaveH5Seurat(so_subset, filename = out, overwrite = TRUE)
 
 # - Convert the h5Seurat file to h5ad format
-sprintf("Converting h5Seurat to h5ad format: %s\n", glue("{out}.h5seurat"))
+cat(sprintf("Converting h5Seurat to h5ad format: %s", glue("{out}.h5seurat")))
 Convert(glue("{out}.h5seurat"), dest = "h5ad", overwrite = TRUE)
 
-sprintf("Conversion complete. Output file: %s.h5ad\n", out)
+cat(sprintf("Conversion complete. Output file: %s.h5ad", out))

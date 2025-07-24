@@ -36,22 +36,20 @@ process ENSURE_H5AD {
     matrix="${matrix}"
     id="${sample_meta.id}"
 
-    tee -a "\$LOG" <<< "\$(date +'%Y-%m-%d %H:%M:%S.%3N') [INFO]: Using matrix file '\${matrix}' with ID '\${id}'"
+    echo "\$(date +'%Y-%m-%d %H:%M:%S.%3N') [INFO]: Using matrix file '\${matrix}' with ID '\${id}'" | tee -a "\$LOG"
     
     if [[ "\$matrix" == *.rds ]]; then
-        tee -a "\$LOG" <<< "\$(date +'%Y-%m-%d %H:%M:%S.%3N') [INFO]: Converting RDS to H5AD for sample: \$id" > /dev/null
+        echo "\$(date +'%Y-%m-%d %H:%M:%S.%3N') [INFO]: Converting RDS to H5AD for sample: \$id" | tee -a "\$LOG"
         rds_to_h5ad.R \\
             --rds "\$matrix" \\
             --out "\${id}" \\
             --ident "\${id}" \\
-            2>&1 | tee -a "\$LOG" > /dev/null
-        echo "\${id}.h5ad"
+            2>&1 | tee -a "\$LOG"
     elif [[ "\$matrix" == *.h5ad ]]; then
-        tee -a "\$(date +'%Y-%m-%d %H:%M:%S.%3N') [INFO]: Matrix is already in H5AD format: \$matrix" > /dev/null
+        echo "\$(date +'%Y-%m-%d %H:%M:%S.%3N') [INFO]: Matrix is already in H5AD format: \$matrix" | tee -a "\$LOG"
         cp "\$matrix" "\${id}.h5ad"
-        echo "\${id}.h5ad"
     else 
-        tee -a "\$(date +'%Y-%m-%d %H:%M:%S.%3N') [ERROR]: Unsupported file format for matrix: \$matrix" > /dev/null
+        echo "\$(date +'%Y-%m-%d %H:%M:%S.%3N') [ERROR]: Unsupported file format for matrix: \$matrix" | tee -a "\$LOG"
         exit 65
     fi
     """

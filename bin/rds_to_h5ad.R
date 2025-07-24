@@ -33,7 +33,7 @@ args <- commandArgs(trailingOnly = TRUE)
 opt_list <- list(
     "--rds"     = NA,
     "--out"     = NA,
-    "--ident"   = NA,
+    "--ident"   = NA
 )
 
 for(i in seq(1, length(args), by=2)) {
